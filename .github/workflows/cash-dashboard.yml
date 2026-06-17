@@ -1,0 +1,36 @@
+name: Cash Dashboard Refresh
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"   # Mondays at 12:00 UTC
+  workflow_dispatch:        # lets you run it on demand from the Actions tab
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: qbo_cash_dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Pull QBO and update dashboard
+        run: python pull_and_write.py
+        env:
+          QBO_CLIENT_ID:     ${{ secrets.QBO_CLIENT_ID }}
+          QBO_CLIENT_SECRET: ${{ secrets.QBO_CLIENT_SECRET }}
+          QBO_REFRESH_TOKEN: ${{ secrets.QBO_REFRESH_TOKEN }}
+          QBO_REALM_ID:      ${{ secrets.QBO_REALM_ID }}
+          QBO_ENV:           production
+          GOOGLE_SA_KEY:     ${{ secrets.GOOGLE_SA_KEY }}
+          SHEET_ID:          ${{ secrets.SHEET_ID }}
+          GH_REPO:           ${{ github.repository }}
+          GH_PAT:            ${{ secrets.GH_PAT }}

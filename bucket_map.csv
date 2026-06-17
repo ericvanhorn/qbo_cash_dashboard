@@ -1,0 +1,27 @@
+acct4,bucket,line
+6010,People,Wages (W2)
+6011,People,Bonus
+6851,People,Payroll taxes
+6000,People,Benefits & admin
+6501,People,Benefits & admin
+6090,People,Other contractors
+5100,Product & infrastructure,Cloud & data services
+6210,Product & infrastructure,Internal software & tools
+5200,Panels,Panels
+5300,Panels,Panels
+5400,Panels,Panels
+6410,Professional services,Professional services
+6420,Professional services,Professional services
+6430,Professional services,Professional services
+6100,Overhead,Overhead
+6200,Overhead,Overhead
+6230,Overhead,Overhead
+6510,Overhead,Overhead
+6601,Overhead,Overhead
+6605,Overhead,Overhead
+6720,Overhead,Overhead
+6802,Overhead,Overhead
+6850,Overhead,Overhead
+6440,One-time,Product build (one-time)
+9020,Non-cash,Amortization (non-cash)
+4100,Revenue,Revenue received
