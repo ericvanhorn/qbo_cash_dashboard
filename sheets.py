@@ -26,3 +26,10 @@ def write_cash(sheet, balance):
     """Drop the live bank balance into the dashboard's cash-on-hand cell (B6)."""
     ws = sheet.worksheet("Cash Dashboard")
     ws.update_acell("B6", round(float(balance), 2))
+
+
+def write_refreshed(sheet):
+    """Stamp the last-refreshed datetime into D6."""
+    import datetime as dt
+    ws = sheet.worksheet("Cash Dashboard")
+    ws.update_acell("D6", dt.datetime.utcnow().strftime("%-d %b %Y %H:%M UTC"))

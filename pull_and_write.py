@@ -15,7 +15,7 @@ import sys
 import traceback
 
 from qbo import QBO, QBOAuthError, parse_pl_detail
-from sheets import open_sheet, write_data, write_cash
+from sheets import open_sheet, write_data, write_cash, write_refreshed
 from github_secret import update_repo_secret
 
 ERROR_LOG = "qbo_error.log"
@@ -146,6 +146,7 @@ def main():
     sheet = open_sheet(json.loads(os.environ["GOOGLE_SA_KEY"]), os.environ["SHEET_ID"])
     write_data(sheet, rows)
     write_cash(sheet, balance)
+    write_refreshed(sheet)
 
     # Persist the rotated refresh token so the next run can authenticate.
     if qbo.new_refresh_token and qbo.new_refresh_token != os.environ["QBO_REFRESH_TOKEN"]:
