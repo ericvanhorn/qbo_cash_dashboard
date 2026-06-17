@@ -8,9 +8,6 @@ on:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: qbo_cash_dashboard
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +37,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: qbo-error-log
-          path: qbo_cash_dashboard/qbo_error.log
+          path: qbo_error.log
           if-no-files-found: ignore
           retention-days: 90
