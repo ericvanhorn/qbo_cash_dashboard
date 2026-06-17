@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+qbo_error.log
+test_qbo.py
+test_error_handling.py

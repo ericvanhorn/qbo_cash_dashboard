@@ -145,6 +145,8 @@ class QBO:
 
     def pl_detail(self, start_date, end_date, method="Cash"):
         """Profit & Loss Detail report — transaction-level rows, cash basis."""
+        if start_date > end_date:
+            raise ValueError(f"start_date {start_date!r} is after end_date {end_date!r}")
         return self._get(
             f"/v3/company/{self.realm_id}/reports/ProfitAndLossDetail",
             {"accounting_method": method, "start_date": start_date, "end_date": end_date},
