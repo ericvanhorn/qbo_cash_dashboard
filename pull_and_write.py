@@ -2,16 +2,23 @@
 
 Run weekly by GitHub Actions. Full-refresh each run (no incremental/dedup state)
 because the data is small and a clean rewrite is the most robust approach.
+
+On failure, a structured error log is written to qbo_error.log; the workflow
+uploads it as a build artifact so it's retrievable after the console ages out.
 """
 import csv
 import datetime as dt
 import json
 import os
 import re
+import sys
+import traceback
 
-from qbo import QBO, parse_pl_detail
+from qbo import QBO, QBOAuthError, parse_pl_detail
 from sheets import open_sheet, write_data, write_cash
 from github_secret import update_repo_secret
+
+ERROR_LOG = "qbo_error.log"
 
 
 def load_map(path):
@@ -51,6 +58,30 @@ def to_float(x):
         return None
 
 
+def _write_error_log(context, exc, intuit_tid=None):
+    """Write a structured error entry to ERROR_LOG for artifact upload."""
+    entry = {
+        "timestamp": dt.datetime.utcnow().isoformat() + "Z",
+        "context": context,
+        "error_type": type(exc).__name__,
+        "error": str(exc),
+        "intuit_tid": intuit_tid,
+        "traceback": traceback.format_exc(),
+    }
+    # Include HTTP details if available on the exception.
+    response = getattr(exc, "response", None)
+    if response is not None:
+        entry["http_status"] = response.status_code
+        entry["http_url"] = response.url
+        try:
+            entry["http_body"] = response.json()
+        except Exception:
+            entry["http_body"] = response.text[:2000]
+
+    with open(ERROR_LOG, "a") as f:
+        f.write(json.dumps(entry, indent=2) + "\n")
+
+
 def main():
     qbo = QBO(
         client_id=os.environ["QBO_CLIENT_ID"],
@@ -59,13 +90,33 @@ def main():
         realm_id=os.environ["QBO_REALM_ID"],
         env=os.environ.get("QBO_ENV", "production"),
     )
-    qbo.refresh()
+
+    try:
+        qbo.refresh()
+    except QBOAuthError as e:
+        _write_error_log("token_refresh", e, qbo.last_intuit_tid)
+        print(f"FATAL: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        _write_error_log("token_refresh", e, qbo.last_intuit_tid)
+        print(f"FATAL: token refresh failed — see {ERROR_LOG}", file=sys.stderr)
+        sys.exit(1)
 
     year = dt.date.today().year
     start = f"{year}-01-01"
     end = dt.date.today().isoformat()
 
-    report = qbo.pl_detail(start, end, method="Cash")  # cash basis: money when it moves
+    try:
+        report = qbo.pl_detail(start, end, method="Cash")
+    except QBOAuthError as e:
+        _write_error_log("pl_detail", e, qbo.last_intuit_tid)
+        print(f"FATAL: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        _write_error_log("pl_detail", e, qbo.last_intuit_tid)
+        print(f"FATAL: P&L Detail fetch failed — see {ERROR_LOG}", file=sys.stderr)
+        sys.exit(1)
+
     txns = parse_pl_detail(report)
     bmap = load_map(os.path.join(os.path.dirname(__file__), "bucket_map.csv"))
 
@@ -81,7 +132,16 @@ def main():
             continue
         rows.append([t["date"], label, bucket, line, t["name"], amount])
 
-    balance, accounts = qbo.bank_balance()
+    try:
+        balance, accounts = qbo.bank_balance()
+    except QBOAuthError as e:
+        _write_error_log("bank_balance", e, qbo.last_intuit_tid)
+        print(f"FATAL: {e}", file=sys.stderr)
+        sys.exit(1)
+    except Exception as e:
+        _write_error_log("bank_balance", e, qbo.last_intuit_tid)
+        print(f"FATAL: bank balance fetch failed — see {ERROR_LOG}", file=sys.stderr)
+        sys.exit(1)
 
     sheet = open_sheet(json.loads(os.environ["GOOGLE_SA_KEY"]), os.environ["SHEET_ID"])
     write_data(sheet, rows)
