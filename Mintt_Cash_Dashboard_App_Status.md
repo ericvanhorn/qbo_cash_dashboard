@@ -28,4 +28,4 @@ this page says.
 
 ### Questions
 
-Contact Mintt at [insert contact email].
+Contact Mintt at help@minttdata.com.
