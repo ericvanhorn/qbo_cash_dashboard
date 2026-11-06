@@ -152,6 +152,40 @@ class QBO:
             {"accounting_method": method, "start_date": start_date, "end_date": end_date},
         )
 
+    def account_id(self, acct_num):
+        """QBO internal Id for an account number (e.g. '1420'), or None."""
+        j = self._get(
+            f"/v3/company/{self.realm_id}/query",
+            {"query": f"select Id from Account where AcctNum = '{acct_num}'"},
+        )
+        accts = j.get("QueryResponse", {}).get("Account", [])
+        return accts[0]["Id"] if accts else None
+
+    def general_ledger(self, account_id, start_date, end_date, method="Cash"):
+        """General Ledger report for one account (works for balance-sheet accounts)."""
+        if start_date > end_date:
+            raise ValueError(f"start_date {start_date!r} is after end_date {end_date!r}")
+        return self._get(
+            f"/v3/company/{self.realm_id}/reports/GeneralLedger",
+            {"accounting_method": method, "start_date": start_date,
+             "end_date": end_date, "account": account_id},
+        )
+
+    def query_all(self, entity, where):
+        """Run `select * from <entity> where ...`, paging through all results."""
+        out, start = [], 1
+        while True:
+            j = self._get(
+                f"/v3/company/{self.realm_id}/query",
+                {"query": f"select * from {entity} where {where} "
+                          f"startposition {start} maxresults 500"},
+            )
+            batch = j.get("QueryResponse", {}).get(entity, [])
+            out.extend(batch)
+            if len(batch) < 500:
+                return out
+            start += 500
+
     def bank_balance(self):
         """Sum of CurrentBalance across all Bank-type accounts = cash on hand.
 
