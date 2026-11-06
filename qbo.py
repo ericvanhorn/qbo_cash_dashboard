@@ -153,13 +153,17 @@ class QBO:
         )
 
     def account_id(self, acct_num):
-        """QBO internal Id for an account number (e.g. '1420'), or None."""
-        j = self._get(
-            f"/v3/company/{self.realm_id}/query",
-            {"query": f"select Id from Account where AcctNum = '{acct_num}'"},
-        )
-        accts = j.get("QueryResponse", {}).get("Account", [])
-        return accts[0]["Id"] if accts else None
+        """QBO internal Id for an account number (e.g. '1420'), or None.
+
+        AcctNum isn't queryable, so fetch accounts and match client-side on
+        AcctNum, falling back to a name that starts with the number.
+        """
+        for a in self.query_all("Account", "Active in (true, false)"):
+            if str(a.get("AcctNum", "")).strip() == acct_num:
+                return a["Id"]
+            if str(a.get("Name", "")).strip().startswith(acct_num):
+                return a["Id"]
+        return None
 
     def general_ledger(self, account_id, start_date, end_date, method="Cash"):
         """General Ledger report for one account (works for balance-sheet accounts)."""
